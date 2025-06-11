@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>気温・水温</title>
+    <title>気温・水温記録</title>
     <style>
         html, body {
             height: 100%;
@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
+
 <body>
 <div id="map"></div>
 <script>
@@ -32,257 +33,277 @@
     var popupStates = {};
     var popupList = [];
 
+    // 計測スポット座標
     var points = [
-        [36.3360211, 137.9123328],
-        [36.3367392, 137.9117307],
-        [36.3370849, 137.9110578],
-        [36.3377299, 137.9106320],
-        [36.3378890, 137.9103088],
-        [36.3383132, 137.9103624],
-        [36.3387076, 137.9099986],
-        [36.3388982, 137.9086408],
-        [36.3391791, 137.9087913]
+        // 大王畑
+        [36.3360211, 137.9123328],  // 1(50番)
+        [36.3367392, 137.9117307],  // 2(47-1番)
+        [36.3370849, 137.9110578],  // 3(30番)
+        [36.3377299, 137.9106320],  // 4(45番)
+        [36.3378890, 137.9103088],  // 5(20番)
+        [36.3383132, 137.9103624],  // 6(41番)
+        [36.3387076, 137.9099986],  // 7(14番)
+        // 西畑
+        [36.3388982, 137.9086408],  // 8(2番)
+        [36.3391791, 137.9087913]   // 9(1番)
     ];
 
-    // ⛳ 手動で異常マーカーを指定：配列内は index 番号（0 から）
-    var abnormalIndices = [5, 6]; // ← ここに異常だと思う点のインデックスを列挙する
+    // 温度が異常の計測スポットを指定（index番号0から）
+    var abnormalIndices = [6, 7, 8];
 
     var contents = [
+        // 大王畑
         `<b>50番</b><br>
-         <select onchange="changeYear(this, 'popup0')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup0_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 15.1°C（5.6～27.1°C）</span><br>
-         <span style='color:blue;'>水温: 14.0°C（12.8～16.0°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.6°C（0.0～25.7°C）</span><br>
-         <span style='color:blue;'>水温: 13.1°C（11.8～14.8°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.1°C（-4.4～21.9°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（11.5～14.5°C）</span><br>
-         </div><div id="popup0_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 2.9°C（-5.9～24.7°C）</span><br>
-         <span style='color:blue;'>水温: 11.7°C（9.8～14.4°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.3°C（-7.7～19.4°C）</span><br>
-         <span style='color:blue;'>水温: 11.4°C（9.6～15.3°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.4°C（-3.2～28.8°C）</span><br>
-         <span style='color:blue;'>水温: 12.5°C（10.9～15.5°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.5°C（0.2～30.9°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（11.9～14.6°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 15.5°C（5.1～29.7°C）</span><br>
-         <span style='color:blue;'>水温: 12.8°C（12.4～13.2°C）</span>`,
-         `<b>47-1番</b><br>
-         <select onchange="changeYear(this, 'popup1')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup1_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 14.6°C（4.9～28.3°C）</span><br>
-         <span style='color:blue;'>水温: 11.9°C（10.6～14.3°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.2°C（0.0～24.2°C）</span><br>
-         <span style='color:blue;'>水温: 11.1°C（9.8～12.8°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.0°C（-5.0～20.1°C）</span><br>
-         <span style='color:blue;'>水温: 10.4°C（9.6～12.1°C）</span><br>
-         </div><div id="popup1_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 2.9°C（-6.4～17.6°C）</span><br>
-         <span style='color:blue;'>水温: 10.4°C（9.4～12.5°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.2°C（-8.1～17.9°C）</span><br>
-         <span style='color:blue;'>水温: 10.4°C（9.2～13.0°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.4°C（-3.4～29.8°C）</span><br>
-         <span style='color:blue;'>水温: 11.7°C（9.8～15.1°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.6°C（0.1～31.9°C）</span><br>
-         <span style='color:blue;'>水温: 12.3°C（10.7～15.1°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 15.5°C（4.3～30.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.4°C（8.8～13.5°C）</span>`,
-         `<b>30番</b><br>
-         <select onchange="changeYear(this, 'popup2')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup2_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 14.6°C（5.5～26.0°C）</span><br>
-         <span style='color:blue;'>水温: 13.0°C（12.9～13.1°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.0°C（0.2～21.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（12.6～12.9°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 3.4°C（-5.0～18.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.5°C（12.3～12.7°C）</span><br>
-         </div><div id="popup2_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 2.1°C（-6.3～14.0°C）</span><br>
-         <span style='color:blue;'>水温: 12.2°C（12.1～12.5°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 1.6°C（-8.2～17.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.1°C（12.0～12.3°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.2°C（-3.6～29.6°C）</span><br>
-         <span style='color:blue;'>水温: 12.2°C（12.0～12.4°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.6°C（-0.2～32.3°C）</span><br>
-         <span style='color:blue;'>水温: 12.4°C（12.2～12.7°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 15.5°C（4.5～31.0°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（12.5～12.8°C）</span>`,
-         `<b>45番</b><br>
-         <select onchange="changeYear(this, 'popup3')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup3_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 14.7°C（5.2～28.6°C）</span><br>
-         <span style='color:blue;'>水温: 13.1°C（12.2～15.6°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.4°C（-0.1～25.0°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（11.7～14.3°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.2°C（-4.9～22.3°C）</span><br>
-         <span style='color:blue;'>水温: 12.2°C（11.5～13.6°C）</span><br>
-         </div><div id="popup3_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 3.1°C（-6.4～17.9°C）</span><br>
-         <span style='color:blue;'>水温: 12.1°C（11.2～13.9°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.3°C（-8.0～18.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.2°C（11.3～14.6°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.3°C（-3.4～29.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.6°C（11.7～15.3°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.4°C（0.1～32.4°C）</span><br>
-         <span style='color:blue;'>水温: 12.8°C（11.8～14.6°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 15.8°C（4.3～32.8°C）</span><br>
-         <span style='color:blue;'>水温: 12.9°C（12.3～13.4°C）</span>`,
-         `<b>20番</b><br>
-         <select onchange="changeYear(this, 'popup4')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup4_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 14.7°C（5.0～28.1°C）</span><br>
-         <span style='color:blue;'>水温: 13.2°C（12.6～14.2°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.4°C（-0.2～24.2°C）</span><br>
-         <span style='color:blue;'>水温: 12.9°C（12.3～13.7°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.1°C（-5.3～22.6°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（12.4～13.4°C）</span><br>
-         </div><div id="popup4_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 3.0°C（-6.5～17.9°C）</span><br>
-         <span style='color:blue;'>水温: 12.6°C（12.3～13.3°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.4°C（-8.0～19.2°C）</span><br>
-         <span style='color:blue;'>水温: 12.6°C（12.2～13.4°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.5°C（-3.1～30.5°C）</span><br>
-         <span style='color:blue;'>水温: 12.9°C（12.4～13.7°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.7°C（0.0～33.4°C）</span><br>
-         <span style='color:blue;'>水温: 13.1°C（12.6～13.6°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 16.0°C（4.2～33.7°C）</span><br>
-         <span style='color:blue;'>水温: 13.2°C（12.8～13.5°C）</span>`,
-         `<b>41番</b><br>
-         <select onchange="changeYear(this, 'popup5')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup5_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 14.8°C（4.9～28.6°C）</span><br>
-         <span style='color:blue;'>水温: 13.3°C（12.6～14.4°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.6°C（-0.2～26.4°C）</span><br>
-         <span style='color:blue;'>水温: 13.1°C（12.4～14.0°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.3°C（-4.7～24.3°C）</span><br>
-         <span style='color:blue;'>水温: 12.7°C（11.5～13.5°C）</span><br>
-         </div><div id="popup5_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 3.1°C（-6.3～19.0°C）</span><br>
-         <span style='color:blue;'>水温: 12.6°C（12.0～13.5°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.4°C（-7.8～20.2°C）</span><br>
-         <span style='color:blue;'>水温: 12.5°C（11.9～13.7°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.7°C（-3.1～31.0°C）</span><br>
-         <span style='color:blue;'>水温: 12.9°C（12.3～13.8°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.7°C（0.0～35.3°C）</span><br>
-         <span style='color:blue;'>水温: 13.1°C（12.5～13.9°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 15.9°C（4.3～32.9°C）</span><br>
-         <span style='color:blue;'>水温: 13.2°C（12.8～13.6°C）</span>`,
-         `<b>14番</b><br>
-         <select onchange="changeYear(this, 'popup6')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup6_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 15.1°C（5.1～31.0°C）</span><br>
-         <span style='color:blue;'>水温: 14.3°C（13.8～15.2°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.6°C（0.0～26.8°C）</span><br>
-         <span style='color:blue;'>水温: 14.0°C（13.3～14.9°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 4.5°C（-4.3～24.2°C）</span><br>
-         <span style='color:blue;'>水温: 13.7°C（13.1～14.7°C）</span><br>
-         </div><div id="popup6_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 3.4°C（-5.7～18.6°C）</span><br>
-         <span style='color:blue;'>水温: 13.5°C（12.7～14.6°C）</span><br>
-         <b>2025-02</b><br>
-         <span style='color:red;'>気温: 2.6°C（-7.3～20.2°C）</span><br>
-         <span style='color:blue;'>水温: 13.3°C（12.5～15.1°C）</span><br>
-         <b>2025-03</b><br>
-         <span style='color:red;'>気温: 7.7°C（-2.7～30.5°C）</span><br>
-         <span style='color:blue;'>水温: 13.3°C（11.7～16.8°C）</span><br>
-         <b>2025-04</b><br>
-         <span style='color:red;'>気温: 12.9°C（0.4～31.5°C）</span><br>
-         <span style='color:blue;'>水温: 14.0°C（13.3～15.6°C）</span><br>
-         <b>2025-05</b><br>
-         <span style='color:red;'>気温: 16.2°C（4.6～33.6°C）</span><br>
-         <span style='color:blue;'>水温: 14.2°C（13.6～14.9°C）</span>`,
-         `<b>2番</b><br>
-         <select onchange="changeYear(this, 'popup7')">
-         <option value="2024">2024年</option>
-         <option value="2025" selected>2025年</option>
-         </select>
-         <div id="popup7_2024" style="display:none;">
-         <b>2024-10</b><br>
-         <span style='color:red;'>気温: 15.5°C（5.6～27.4°C）</span><br>
-         <span style='color:blue;'>水温: 13.7°C（13.2～14.3°C）</span><br>
-         <b>2024-11</b><br>
-         <span style='color:red;'>気温: 9.3°C（0.6～20.7°C）</span><br>
-         <span style='color:blue;'>水温: 12.9°C（12.3～13.5°C）</span><br>
-         <b>2024-12</b><br>
-         <span style='color:red;'>気温: 3.6°C（-3.9～16.7°C）</span><br>
-         <span style='color:blue;'>水温: 11.8°C（11.2～12.5°C）</span><br>
-         </div><div id="popup7_2025" style="display:block;">
-         <b>2025-01</b><br>
-         <span style='color:red;'>気温: 2.3°C（-5.4～18.5°C）</span><br>
+        <select onchange="changeYear(this, 'popup0')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup0_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 15.1°C（5.6～27.1°C）</span><br>
+        <span style='color:blue;'>水温: 14.0°C（12.8～16.0°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.6°C（0.0～25.7°C）</span><br>
+        <span style='color:blue;'>水温: 13.1°C（11.8～14.8°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.1°C（-4.4～21.9°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（11.5～14.5°C）</span><br>
+        </div>
+        <div id="popup0_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 2.9°C（-5.9～24.7°C）</span><br>
+        <span style='color:blue;'>水温: 11.7°C（9.8～14.4°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.3°C（-7.7～19.4°C）</span><br>
+        <span style='color:blue;'>水温: 11.4°C（9.6～15.3°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.4°C（-3.2～28.8°C）</span><br>
+        <span style='color:blue;'>水温: 12.5°C（10.9～15.5°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.5°C（0.2～30.9°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（11.9～14.6°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 15.5°C（5.1～29.7°C）</span><br>
+        <span style='color:blue;'>水温: 12.8°C（12.4～13.2°C）</span>`,
+
+        `<b>47-1番</b><br>
+        <select onchange="changeYear(this, 'popup1')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup1_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 14.6°C（4.9～28.3°C）</span><br>
+        <span style='color:blue;'>水温: 11.9°C（10.6～14.3°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.2°C（0.0～24.2°C）</span><br>
+        <span style='color:blue;'>水温: 11.1°C（9.8～12.8°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.0°C（-5.0～20.1°C）</span><br>
+        <span style='color:blue;'>水温: 10.4°C（9.6～12.1°C）</span><br>
+        </div>
+        <div id="popup1_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 2.9°C（-6.4～17.6°C）</span><br>
+        <span style='color:blue;'>水温: 10.4°C（9.4～12.5°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.2°C（-8.1～17.9°C）</span><br>
+        <span style='color:blue;'>水温: 10.4°C（9.2～13.0°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.4°C（-3.4～29.8°C）</span><br>
+        <span style='color:blue;'>水温: 11.7°C（9.8～15.1°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.6°C（0.1～31.9°C）</span><br>
+        <span style='color:blue;'>水温: 12.3°C（10.7～15.1°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 15.5°C（4.3～30.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.4°C（8.8～13.5°C）</span>`,
+
+        `<b>30番</b><br>
+        <select onchange="changeYear(this, 'popup2')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup2_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 14.6°C（5.5～26.0°C）</span><br>
+        <span style='color:blue;'>水温: 13.0°C（12.9～13.1°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.0°C（0.2～21.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（12.6～12.9°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 3.4°C（-5.0～18.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.5°C（12.3～12.7°C）</span><br>
+        </div>
+        <div id="popup2_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 2.1°C（-6.3～14.0°C）</span><br>
+        <span style='color:blue;'>水温: 12.2°C（12.1～12.5°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 1.6°C（-8.2～17.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.1°C（12.0～12.3°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.2°C（-3.6～29.6°C）</span><br>
+        <span style='color:blue;'>水温: 12.2°C（12.0～12.4°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.6°C（-0.2～32.3°C）</span><br>
+        <span style='color:blue;'>水温: 12.4°C（12.2～12.7°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 15.5°C（4.5～31.0°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（12.5～12.8°C）</span>`,
+
+        `<b>45番</b><br>
+        <select onchange="changeYear(this, 'popup3')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup3_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 14.7°C（5.2～28.6°C）</span><br>
+        <span style='color:blue;'>水温: 13.1°C（12.2～15.6°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.4°C（-0.1～25.0°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（11.7～14.3°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.2°C（-4.9～22.3°C）</span><br>
+        <span style='color:blue;'>水温: 12.2°C（11.5～13.6°C）</span><br>
+        </div>
+        <div id="popup3_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 3.1°C（-6.4～17.9°C）</span><br>
+        <span style='color:blue;'>水温: 12.1°C（11.2～13.9°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.3°C（-8.0～18.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.2°C（11.3～14.6°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.3°C（-3.4～29.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.6°C（11.7～15.3°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.4°C（0.1～32.4°C）</span><br>
+        <span style='color:blue;'>水温: 12.8°C（11.8～14.6°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 15.8°C（4.3～32.8°C）</span><br>
+        <span style='color:blue;'>水温: 12.9°C（12.3～13.4°C）</span>`,
+
+        `<b>20番</b><br>
+        <select onchange="changeYear(this, 'popup4')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup4_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 14.7°C（5.0～28.1°C）</span><br>
+        <span style='color:blue;'>水温: 13.2°C（12.6～14.2°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.4°C（-0.2～24.2°C）</span><br>
+        <span style='color:blue;'>水温: 12.9°C（12.3～13.7°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.1°C（-5.3～22.6°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（12.4～13.4°C）</span><br>
+        </div>
+        <div id="popup4_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 3.0°C（-6.5～17.9°C）</span><br>
+        <span style='color:blue;'>水温: 12.6°C（12.3～13.3°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.4°C（-8.0～19.2°C）</span><br>
+        <span style='color:blue;'>水温: 12.6°C（12.2～13.4°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.5°C（-3.1～30.5°C）</span><br>
+        <span style='color:blue;'>水温: 12.9°C（12.4～13.7°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.7°C（0.0～33.4°C）</span><br>
+        <span style='color:blue;'>水温: 13.1°C（12.6～13.6°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 16.0°C（4.2～33.7°C）</span><br>
+        <span style='color:blue;'>水温: 13.2°C（12.8～13.5°C）</span>`,
+
+        `<b>41番</b><br>
+        <select onchange="changeYear(this, 'popup5')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup5_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 14.8°C（4.9～28.6°C）</span><br>
+        <span style='color:blue;'>水温: 13.3°C（12.6～14.4°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.6°C（-0.2～26.4°C）</span><br>
+        <span style='color:blue;'>水温: 13.1°C（12.4～14.0°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.3°C（-4.7～24.3°C）</span><br>
+        <span style='color:blue;'>水温: 12.7°C（11.5～13.5°C）</span><br>
+        </div>
+        <div id="popup5_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 3.1°C（-6.3～19.0°C）</span><br>
+        <span style='color:blue;'>水温: 12.6°C（12.0～13.5°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.4°C（-7.8～20.2°C）</span><br>
+        <span style='color:blue;'>水温: 12.5°C（11.9～13.7°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.7°C（-3.1～31.0°C）</span><br>
+        <span style='color:blue;'>水温: 12.9°C（12.3～13.8°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.7°C（0.0～35.3°C）</span><br>
+        <span style='color:blue;'>水温: 13.1°C（12.5～13.9°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 15.9°C（4.3～32.9°C）</span><br>
+        <span style='color:blue;'>水温: 13.2°C（12.8～13.6°C）</span>`,
+
+        `<b>14番</b><br>
+        <select onchange="changeYear(this, 'popup6')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup6_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 15.1°C（5.1～31.0°C）</span><br>
+        <span style='color:blue;'>水温: 14.3°C（13.8～15.2°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.6°C（0.0～26.8°C）</span><br>
+        <span style='color:blue;'>水温: 14.0°C（13.3～14.9°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 4.5°C（-4.3～24.2°C）</span><br>
+        <span style='color:blue;'>水温: 13.7°C（13.1～14.7°C）</span><br>
+        </div>
+        <div id="popup6_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 3.4°C（-5.7～18.6°C）</span><br>
+        <span style='color:blue;'>水温: 13.5°C（12.7～14.6°C）</span><br>
+        <b>2025-02</b><br>
+        <span style='color:red;'>気温: 2.6°C（-7.3～20.2°C）</span><br>
+        <span style='color:blue;'>水温: 13.3°C（12.5～15.1°C）</span><br>
+        <b>2025-03</b><br>
+        <span style='color:red;'>気温: 7.7°C（-2.7～30.5°C）</span><br>
+        <span style='color:blue;'>水温: 13.3°C（11.7～16.8°C）</span><br>
+        <b>2025-04</b><br>
+        <span style='color:red;'>気温: 12.9°C（0.4～31.5°C）</span><br>
+        <span style='color:blue;'>水温: 14.0°C（13.3～15.6°C）</span><br>
+        <b>2025-05</b><br>
+        <span style='color:red;'>気温: 16.2°C（4.6～33.6°C）</span><br>
+        <span style='color:blue;'>水温: 14.2°C（13.6～14.9°C）</span>`,
+
+        // 西畑
+        `<b>2番</b><br>
+        <select onchange="changeYear(this, 'popup7')">
+        <option value="2024">2024年</option>
+        <option value="2025" selected>2025年</option>
+        </select>
+        <div id="popup7_2024" style="display:none;">
+        <b>2024-10</b><br>
+        <span style='color:red;'>気温: 15.5°C（5.6～27.4°C）</span><br>
+        <span style='color:blue;'>水温: 13.7°C（13.2～14.3°C）</span><br>
+        <b>2024-11</b><br>
+        <span style='color:red;'>気温: 9.3°C（0.6～20.7°C）</span><br>
+        <span style='color:blue;'>水温: 12.9°C（12.3～13.5°C）</span><br>
+        <b>2024-12</b><br>
+        <span style='color:red;'>気温: 3.6°C（-3.9～16.7°C）</span><br>
+        <span style='color:blue;'>水温: 11.8°C（11.2～12.5°C）</span><br>
+        </div>
+        <div id="popup7_2025" style="display:block;">
+        <b>2025-01</b><br>
+        <span style='color:red;'>気温: 2.3°C（-5.4～18.5°C）</span><br>
         <span style='color:blue;'>水温: 10.8°C（10.3～11.4°C）</span><br>
         <b>2025-02</b><br>
         <span style='color:red;'>気温: 2.1°C（-6.9～19.3°C）</span><br>
@@ -296,6 +317,7 @@
         <b>2025-05</b><br>
         <span style='color:red;'>気温: 16.4°C（4.8～32.0°C）</span><br>
         <span style='color:blue;'>水温: 11.9°C（11.2～12.6°C）</span>`,
+
         `<b>1番</b><br>
         <select onchange="changeYear(this, 'popup8')">
         <option value="2024">2024年</option>
@@ -311,7 +333,8 @@
         <b>2024-12</b><br>
         <span style='color:red;'>気温: 4.2°C（-4.8～26.0°C）</span><br>
         <span style='color:blue;'>水温: 12.4°C（11.9～12.4°C）</span><br>
-        </div><div id="popup8_2025" style="display:block;">
+        </div>
+        <div id="popup8_2025" style="display:block;">
         <b>2025-01</b><br>
         <span style='color:red;'>気温: 3.1°C（-6.2～21.0°C）</span><br>
         <span style='color:blue;'>水温: 12.3°C（12.2～12.4°C）</span><br>
@@ -329,6 +352,7 @@
         <span style='color:blue;'>水温: 12.2°C（12.2～12.3°C）</span>`
     ];
 
+
     function changeYear(selectObj, popupIdPrefix) {
         const selectedYear = selectObj.value;
         document.querySelectorAll(`[id^="${popupIdPrefix}_"]`).forEach(el => el.style.display = 'none');
@@ -345,19 +369,19 @@
         let latlng = points[i];
         let content = contents[i] + "<br><button onclick='closeSpecificPopup(" + i + ")'>閉じる</button>";
 
-        // ✅ 異常点かどうかをチェック
+        //  温度が異常の計測スポットかどうかをチェック
         let isAbnormal = abnormalIndices.includes(i);
 
-        // ✅ 色付きマーカーを作成
+        // 色付きマーカーを作成
         let markerIcon = L.divIcon({
             className: 'custom-div-icon',
             html: `<div style="
-                 width: 12px;
-                 height: 12px;
-                 background-color: ${isAbnormal ? '#f7a6a6' : '#a6e3a1'};
-                 border: 2px solid ${isAbnormal ? '#e74c3c' : '#27ae60'};
-                 border-radius: 50%;
-                 box-shadow: 0 0 2px rgba(0,0,0,0.3);
+                width: 12px;
+                height: 12px;
+                background-color: ${isAbnormal ? '#f7a6a6' : '#a6e3a1'};
+                border: 2px solid ${isAbnormal ? '#e74c3c' : '#27ae60'};
+                border-radius: 50%;
+                box-shadow: 0 0 2px rgba(0,0,0,0.3);
             "></div>`,
             iconSize: [20, 20],
             iconAnchor: [10, 10],
